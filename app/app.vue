@@ -9,7 +9,7 @@
 
         <div ref="stopwatchCard"
           class="stopwatch-card bg-white bg-opacity-10 p-6 w-full max-w-md border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
-          <div ref="timeDisplay" class="time-display text-6xl font-bold text-white tracking-widest my-6">
+          <div ref="timeDisplay" class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6">
             {{ formattedTime }}
           </div>
         </div>
@@ -59,13 +59,13 @@ export default {
 
     const menuItems = ref([
       { icon: '', label: '' },
-      { icon: 'line-md:pause-to-play-filled-transition', label: 'Play/Pause' },
+      { icon: 'material-symbols:restart-alt', label: 'Reset' },
       { icon: '', label: '' },
       { icon: 'line-md:monitor-screenshot-twotone', label: 'Full Screen' },
       { icon: '', label: '' },
       { icon: 'line-md:github-twotone', label: 'Code' },
       { icon: '', label: '' },
-      { icon: 'material-symbols:restart-alt', label: 'Reset' },
+      { icon: 'line-md:pause-to-play-filled-transition', label: 'Play/Pause' },
     ])
 
     const time = ref(0)
@@ -103,8 +103,18 @@ export default {
       isRunning.value = false
     }
 
+    const toggleFullScreen = () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error('Error attempting to enable full-screen mode:', err);
+        });
+      }
+    };
+
     watch(isRunning, (newVal) => {
-      menuItems.value[6].icon = newVal ? 'line-md:pause' : 'line-md:pause-to-play-filled-transition'
+      menuItems.value[7].icon = newVal ? 'line-md:pause' : 'line-md:pause-to-play-filled-transition'
     })
 
     const generateNodeStaggered = (totalCount, intervalMs = 15) => {
@@ -211,6 +221,17 @@ export default {
       mouse.value.y = event.clientY
     }
 
+    const handleKeyDown = (event) => {
+      if (event.key === 'f' || event.key === 'F') {
+        toggleFullScreen();
+      } else if (event.key === ' ') {
+        event.preventDefault();
+        toggleRunning();
+      } else if (event.key === 'r' || event.key === 'R') {
+        reset();
+      }
+    }
+
     const onMouseDown = (event) => {
       const { clientX: x, clientY: y } = event
       showing.value = true
@@ -225,16 +246,6 @@ export default {
       const { clientX: x, clientY: y } = event.touches[0]
       onMouseDown({ clientX: x, clientY: y })
     }
-
-    const toggleFullScreen = () => {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        document.documentElement.requestFullscreen().catch(err => {
-          console.error('Error attempting to enable full-screen mode:', err);
-        });
-      }
-    };
 
     const handleFullscreenChange = () => {
       const isEntering = !!document.fullscreenElement;
@@ -275,14 +286,14 @@ export default {
     }
 
     const onMouseUp = () => {
-      if (chosenIndex.value === 4) {
+      if (chosenIndex.value === 2) {
+        reset();
+      } else if (chosenIndex.value === 4) {
         toggleFullScreen();
       } else if (chosenIndex.value === 6) {
         window.open('https://github.com/downtomarsguy', '_blank');
-      } else if (chosenIndex.value === 7) {
-        toggleRunning();
       } else if (chosenIndex.value === 8) {
-        reset();
+        toggleRunning();
       }
       showing.value = false
       chosenIndex.value = 0
@@ -326,6 +337,7 @@ export default {
       animate()
 
       document.addEventListener('fullscreenchange', handleFullscreenChange)
+      document.addEventListener('keydown', handleKeyDown)
 
       setTimeout(async () => {
         await nextTick()
@@ -344,6 +356,7 @@ export default {
     onUnmounted(() => {
       clearInterval(intervalId.value)
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('keydown', handleKeyDown)
     })
 
     return {
@@ -362,7 +375,6 @@ export default {
       onTouchEnd,
       onMouseMove,
       onTouchMove,
-      // Stopwatch
       formattedTime,
       isRunning,
       toggleRunning,
@@ -372,7 +384,34 @@ export default {
 }
 </script>
 
+useHead({
+link: [
+{
+rel: 'preconnect',
+href: 'https://fonts.googleapis.com'
+},
+{
+rel: 'preconnect',
+href: 'https://fonts.gstatic.com',
+crossorigin: ''
+},
+{
+rel: 'stylesheet',
+href: 'https://fonts.googleapis.com/css2?family=SUSE+Mono:ital,wght@0,100..800;1,100..800&display=swap'
+},
+]
+})
+
 <style scoped>
+body {
+  font-family: "SUSE Mono", sans-serif;
+}
+
+.suse-mono {
+  font-family: "SUSE Mono", sans-serif;
+
+}
+
 @keyframes expandVertical {
   from {
     transform: scaleY(0);
