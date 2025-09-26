@@ -3,46 +3,25 @@
     <div class="bg-zinc-950 bg-opacity-80">
       <div
         class="app bg-zinc-950 bg-opacity-80 h-screen w-full relative overflow-hidden select-none flex items-center justify-center"
-        @contextmenu.prevent
-        @mousedown="onMouseDown"
-        @touchstart="onTouchStart"
-        @mouseup="onMouseUp"
-        @touchend="onTouchEnd"
-        @mousemove="onMouseMove"
-        @touchmove="onTouchMove"
-      >
-        <!-- Background canvas -->
+        @contextmenu.prevent @mousedown="onMouseDown" @touchstart="onTouchStart" @mouseup="onMouseUp"
+        @touchend="onTouchEnd" @mousemove="onMouseMove" @touchmove="onTouchMove">
         <canvas ref="canvas" class="absolute inset-0"></canvas>
 
-        <!-- Centered stopwatch card -->
-        <div
-          class="bg-white bg-opacity-10 p-6 w-full max-w-md border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center"
-        >
-          <!-- Stopwatch display -->
-          <div class="text-6xl font-bold text-white tracking-widest my-6">
+        <div ref="stopwatchCard"
+          class="stopwatch-card bg-white bg-opacity-10 p-6 w-full max-w-md border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
+          <div ref="timeDisplay" class="time-display text-6xl font-bold text-white tracking-widest my-6">
             {{ formattedTime }}
           </div>
         </div>
 
-        <!-- Radial menu -->
-        <div
-          ref="wheelRef"
-          class="wheel z-30"
-          :class="{ 'on': showing }"
-          :data-chosen="chosenIndex"
-          :style="{ '--x': `${wheelX}px`, '--y': `${wheelY}px` }"
-        >
-          <div
-            v-for="(item, index) in menuItems"
-            :key="index"
-            class="arc"
-            :style="{
-              '--rotation': `${-22.5 + index * 45}deg`,
-              '--color': 'rgba(20, 184, 166, 0.4)',
-              '--color-border': 'rgba(20, 184, 166, 0.6)',
-              'transition-delay': `${(index % 2) * 0.015}s`
-            }"
-          >
+        <div ref="wheelRef" class="wheel z-30" :class="{ 'on': showing }" :data-chosen="chosenIndex"
+          :style="{ '--x': `${wheelX}px`, '--y': `${wheelY}px` }">
+          <div v-for="(item, index) in menuItems" :key="index" class="arc" :style="{
+            '--rotation': `${-22.5 + index * 45}deg`,
+            '--color': 'rgba(20, 184, 166, 0.4)',
+            '--color-border': 'rgba(20, 184, 166, 0.6)',
+            'transition-delay': `${(index % 2) * 0.015}s`
+          }">
             <Icon :name="item.icon" class="arc-icon" />
           </div>
         </div>
@@ -52,13 +31,15 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 
 export default {
   name: 'RadialMenuStopwatch',
   setup() {
     const wheelRef = ref(null)
     const canvas = ref(null)
+    const stopwatchCard = ref(null)
+    const timeDisplay = ref(null)
     const showing = ref(false)
     const anchorX = ref(0)
     const anchorY = ref(0)
@@ -77,18 +58,17 @@ export default {
     const disconnectionThreshold = 150
 
     const menuItems = ref([
-      { icon: 'line-md:home-md-twotone', label: 'Home' },
-      { icon: 'line-md:person-twotone', label: 'Accounts' },
-      { icon: 'line-md:edit-full-twotone', label: 'Edit' },
-      { icon: 'line-md:monitor-screenshot-twotone', label: 'Full Screen' },
-      { icon: 'line-md:clipboard-list-twotone', label: 'Logs' },
-      { icon: 'line-md:github-twotone', label: 'Code' },
+      { icon: '', label: '' },
       { icon: 'line-md:pause-to-play-filled-transition', label: 'Play/Pause' },
-      { icon: 'material-symbols:restart-alt', label: 'Reset' }
+      { icon: '', label: '' },
+      { icon: 'line-md:monitor-screenshot-twotone', label: 'Full Screen' },
+      { icon: '', label: '' },
+      { icon: 'line-md:github-twotone', label: 'Code' },
+      { icon: '', label: '' },
+      { icon: 'material-symbols:restart-alt', label: 'Reset' },
     ])
 
-    // Stopwatch state
-    const time = ref(0) // milliseconds
+    const time = ref(0)
     const isRunning = ref(false)
     const intervalId = ref(null)
 
@@ -123,39 +103,46 @@ export default {
       isRunning.value = false
     }
 
-    // Update play/pause icon based on running state
     watch(isRunning, (newVal) => {
       menuItems.value[6].icon = newVal ? 'line-md:pause' : 'line-md:pause-to-play-filled-transition'
     })
 
-    // Particle background
-    const generateNodes = (count) => {
-      for (let i = 0; i < count; i++) {
-        const x = Math.random() * canvas.value.width
-        const y = Math.random() * canvas.value.height
-        const newNode = {
-          x,
-          y,
-          radius: Math.random() * 3 + 2,
-          growth: Math.random() * 0.04 + 0.01,
-          velocity: { x: 0, y: 0 },
-        }
-        nodes.value.push(newNode)
-
-        nodes.value.forEach((node) => {
-          if (Math.hypot(node.x - newNode.x, node.y - newNode.y) < 80 && node !== newNode) {
-            edges.value.push({ source: node, target: newNode })
+    const generateNodeStaggered = (totalCount, intervalMs = 15) => {
+      let i = 0
+      const interval = setInterval(() => {
+        if (i < totalCount) {
+          const x = Math.random() * canvas.value.width
+          const y = Math.random() * canvas.value.height
+          const newNode = {
+            x,
+            y,
+            radius: 0,
+            growth: Math.random() * 0.04 + 0.02,
+            velocity: { x: 0, y: 0 },
+            opacity: 0
           }
-        })
-      }
+          nodes.value.push(newNode)
+
+          nodes.value.forEach((node) => {
+            if (Math.hypot(node.x - newNode.x, node.y - newNode.y) < 80 && node !== newNode) {
+              edges.value.push({ source: node, target: newNode })
+            }
+          })
+
+          i++
+        } else {
+          clearInterval(interval)
+        }
+      }, intervalMs)
     }
 
     const animate = () => {
       if (!ctx.value) return
       ctx.value.clearRect(0, 0, canvas.value.width, canvas.value.height)
       ctx.value.strokeStyle = "white"
-      ctx.value.lineWidth = 0.5
+      ctx.value.lineWidth = 1.2
 
+      ctx.value.globalAlpha = 0.3
       edges.value.forEach((edge) => {
         ctx.value.beginPath()
         ctx.value.moveTo(edge.source.x, edge.source.y)
@@ -163,8 +150,12 @@ export default {
         ctx.value.stroke()
       })
 
+      ctx.value.globalAlpha = 1
       ctx.value.fillStyle = "white"
       nodes.value.forEach((node) => {
+        node.opacity = Math.min(node.opacity + 0.02, 1)
+        ctx.value.globalAlpha = node.opacity
+
         const dx = mouse.value.x - node.x
         const dy = mouse.value.y - node.y
         const distance = Math.hypot(dx, dy)
@@ -188,13 +179,20 @@ export default {
         node.y += node.velocity.y
 
         node.radius += node.growth
-        if (node.radius > 5 || node.radius < 2) node.growth *= -1
+        if (node.radius > 5) {
+          node.growth *= -1
+          node.radius = 5
+        } else if (node.radius < 0) {
+          node.radius = 0
+          node.growth *= -1
+        }
 
         ctx.value.beginPath()
         ctx.value.arc(node.x, node.y, node.radius, 0, Math.PI * 2)
         ctx.value.fill()
       })
 
+      ctx.value.globalAlpha = 1
       checkNodeDisconnections()
       requestAnimationFrame(animate)
     }
@@ -239,18 +237,44 @@ export default {
     };
 
     const handleFullscreenChange = () => {
-      // Clear existing nodes and edges
+      const isEntering = !!document.fullscreenElement;
+
+      if (isEntering) {
+        if (stopwatchCard.value) {
+          stopwatchCard.value.classList.remove('animate-expand');
+          stopwatchCard.value.offsetHeight;
+        }
+        if (timeDisplay.value) {
+          timeDisplay.value.classList.remove('fade-in');
+          timeDisplay.value.offsetHeight;
+        }
+      }
       nodes.value = []
       edges.value = []
-      // Resize canvas to new dimensions
       canvas.value.width = window.innerWidth
       canvas.value.height = window.innerHeight
-      // Regenerate nodes for the new size
-      generateNodes(69)
+      const nodeCount = isEntering ? 100 : 69
+      generateNodeStaggered(nodeCount)
+
+      if (isEntering) {
+        setTimeout(async () => {
+          await nextTick()
+          if (stopwatchCard.value) {
+            stopwatchCard.value.classList.add('animate-expand')
+          }
+
+          setTimeout(() => {
+            if (timeDisplay.value) {
+              setTimeout(() => {
+                timeDisplay.value.classList.add('fade-in')
+              }, 10)
+            }
+          }, 800)
+        }, 1500)
+      }
     }
 
     const onMouseUp = () => {
-      // Handle radial menu actions based on chosen index
       if (chosenIndex.value === 4) {
         toggleFullScreen();
       } else if (chosenIndex.value === 6) {
@@ -260,7 +284,6 @@ export default {
       } else if (chosenIndex.value === 8) {
         reset();
       }
-      // Hide wheel and reset index
       showing.value = false
       chosenIndex.value = 0
     }
@@ -294,15 +317,28 @@ export default {
       onMouseMove({ clientX: x, clientY: y })
     }
 
-    onMounted(() => {
+    onMounted(async () => {
       ctx.value = canvas.value.getContext("2d")
       canvas.value.width = window.innerWidth
       canvas.value.height = window.innerHeight
-      generateNodes(69)
+
+      generateNodeStaggered(69)
       animate()
 
-      // Listen for fullscreen changes to regenerate background
       document.addEventListener('fullscreenchange', handleFullscreenChange)
+
+      setTimeout(async () => {
+        await nextTick()
+        if (stopwatchCard.value) {
+          stopwatchCard.value.classList.add('animate-expand')
+        }
+
+        setTimeout(() => {
+          if (timeDisplay.value) {
+            timeDisplay.value.classList.add('fade-in')
+          }
+        }, 800)
+      }, 1500)
     })
 
     onUnmounted(() => {
@@ -313,6 +349,8 @@ export default {
     return {
       canvas,
       wheelRef,
+      stopwatchCard,
+      timeDisplay,
       showing,
       chosenIndex,
       wheelX,
@@ -335,7 +373,37 @@ export default {
 </script>
 
 <style scoped>
-/* (unchanged radial menu styles) */
+@keyframes expandVertical {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.stopwatch-card {
+  transform: scaleY(0);
+  opacity: 0;
+  transform-origin: center;
+}
+
+.stopwatch-card.animate-expand {
+  animation: expandVertical 0.8s ease-out forwards;
+}
+
+.time-display {
+  opacity: 0;
+  transition: opacity 0.3s ease-in;
+}
+
+.time-display.fade-in {
+  opacity: 1;
+}
+
 .wheel {
   position: absolute;
   top: var(--y);
