@@ -80,10 +80,10 @@ export default {
       { icon: 'line-md:home-md-twotone', label: 'Home' },
       { icon: 'line-md:person-twotone', label: 'Accounts' },
       { icon: 'line-md:edit-full-twotone', label: 'Edit' },
-      { icon: 'material-symbols:database', label: 'Database' },
+      { icon: 'line-md:monitor-screenshot-twotone', label: 'Full Screen' },
       { icon: 'line-md:clipboard-list-twotone', label: 'Logs' },
       { icon: 'line-md:github-twotone', label: 'Code' },
-      { icon: 'material-symbols:play-arrow', label: 'Play/Pause' },
+      { icon: 'line-md:pause-to-play-filled-transition', label: 'Play/Pause' },
       { icon: 'material-symbols:restart-alt', label: 'Reset' }
     ])
 
@@ -125,7 +125,7 @@ export default {
 
     // Update play/pause icon based on running state
     watch(isRunning, (newVal) => {
-      menuItems.value[6].icon = newVal ? 'material-symbols:pause' : 'material-symbols:play-arrow'
+      menuItems.value[6].icon = newVal ? 'line-md:pause' : 'line-md:pause-to-play-filled-transition'
     })
 
     // Particle background
@@ -228,12 +228,37 @@ export default {
       onMouseDown({ clientX: x, clientY: y })
     }
 
+    const toggleFullScreen = () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error('Error attempting to enable full-screen mode:', err);
+        });
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      // Clear existing nodes and edges
+      nodes.value = []
+      edges.value = []
+      // Resize canvas to new dimensions
+      canvas.value.width = window.innerWidth
+      canvas.value.height = window.innerHeight
+      // Regenerate nodes for the new size
+      generateNodes(69)
+    }
+
     const onMouseUp = () => {
       // Handle radial menu actions based on chosen index
-      if (chosenIndex.value === 7) {
-        toggleRunning()
+      if (chosenIndex.value === 4) {
+        toggleFullScreen();
+      } else if (chosenIndex.value === 6) {
+        window.open('https://github.com/downtomarsguy', '_blank');
+      } else if (chosenIndex.value === 7) {
+        toggleRunning();
       } else if (chosenIndex.value === 8) {
-        reset()
+        reset();
       }
       // Hide wheel and reset index
       showing.value = false
@@ -275,10 +300,14 @@ export default {
       canvas.value.height = window.innerHeight
       generateNodes(69)
       animate()
+
+      // Listen for fullscreen changes to regenerate background
+      document.addEventListener('fullscreenchange', handleFullscreenChange)
     })
 
     onUnmounted(() => {
       clearInterval(intervalId.value)
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
     })
 
     return {
