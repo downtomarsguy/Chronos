@@ -7,11 +7,12 @@
         @touchend="onTouchEnd" @mousemove="onMouseMove" @touchmove="onTouchMove">
         <canvas ref="canvas" class="absolute inset-0"></canvas>
 
-        <div class="w-full h-screen bg-zinc-950 relative overflow-hidden select-none flex items-center justify-center transition-colors duration-500 ease-in-out"
-             :class="{ 'bg-opacity-70': isRunning, 'bg-opacity-0': !isRunning }">
+        <div
+          class="w-full h-screen bg-zinc-950 relative overflow-hidden select-none flex items-center justify-center transition-colors duration-500 ease-in-out"
+          :class="{ 'bg-opacity-70': blurLevel === 70, 'bg-opacity-90': blurLevel === 90, 'bg-opacity-0': blurLevel === 0 }">
           <div ref="stopwatchCard"
-            class="stopwatch-card bg-white bg-opacity-10 p-6 w-full max-w-md border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
-            <div ref="timeDisplay" class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6">
+            class="stopwatch-card bg-white bg-opacity-10 py-2 px-4 border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
+            <div ref="timeDisplay" class="time-display suse-mono text-5xl font-bold text-white tracking-widest my-6">
               {{ formattedTime }}
             </div>
           </div>
@@ -35,12 +36,10 @@
 
 <script>
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import { useHead } from '#imports'  // Optional: Explicit import if needed (Nuxt auto-imports it, but this makes it clear)
-
+import { useHead } from '#imports'
 export default {
   name: 'RadialMenuStopwatch',
   setup() {
-    // Move useHead HERE, inside setup()
     useHead({
       link: [
         {
@@ -81,18 +80,19 @@ export default {
     const disconnectionThreshold = 150
 
     const menuItems = ref([
-      { icon: '', label: '' },
       { icon: 'material-symbols:restart-alt', label: 'Reset' },
-      { icon: '', label: '' },
       { icon: 'line-md:monitor-screenshot-twotone', label: 'Full Screen' },
-      { icon: '', label: '' },
+      { icon: 'line-md:question-square-twotone', label: 'Help' },
+      { icon: 'line-md:star-twotone', label: 'Full Blur' },
+      { icon: 'line-md:star-twotone-half', label: 'Half Blur' },
+      { icon: 'line-md:star-alt', label: 'No Blur' },
       { icon: 'line-md:github-twotone', label: 'Code' },
-      { icon: '', label: '' },
       { icon: 'line-md:pause-to-play-filled-transition', label: 'Play/Pause' },
     ])
 
     const time = ref(0)
     const isRunning = ref(false)
+    const blurLevel = ref(0) // 0: no blur, 70: half, 90: full
     const intervalId = ref(null)
 
     const formattedTime = computed(() => {
@@ -117,6 +117,15 @@ export default {
         }, 100)
       }
       isRunning.value = !isRunning.value
+    }
+
+    const setBlur = (level) => {
+      blurLevel.value = level
+    }
+
+    const showHelp = () => {
+      // Simple help implementation - you can expand this to a modal or more detailed info
+      alert('Help:\n- Space: Play/Pause\n- R: Reset\n- F: Fullscreen\n- Radial Menu: Right-click or long-press for options\n- Blur controls: Adjust background opacity for focus')
     }
 
     const reset = () => {
@@ -252,6 +261,8 @@ export default {
         toggleRunning();
       } else if (event.key === 'r' || event.key === 'R') {
         reset();
+      } else if (event.key === 'h' || event.key === 'H') {
+        showHelp();
       }
     }
 
@@ -309,11 +320,19 @@ export default {
     }
 
     const onMouseUp = () => {
-      if (chosenIndex.value === 2) {
+      if (chosenIndex.value === 1) {
         reset();
-      } else if (chosenIndex.value === 4) {
+      } else if (chosenIndex.value === 2) {
         toggleFullScreen();
+      } else if (chosenIndex.value === 3) {
+        showHelp();
+      } else if (chosenIndex.value === 4) {
+        setBlur(90);
+      } else if (chosenIndex.value === 5) {
+        setBlur(70);
       } else if (chosenIndex.value === 6) {
+        setBlur(0);
+      } else if (chosenIndex.value === 7) {
         window.open('https://github.com/downtomarsguy', '_blank');
       } else if (chosenIndex.value === 8) {
         toggleRunning();
@@ -400,7 +419,10 @@ export default {
       onTouchMove,
       formattedTime,
       isRunning,
+      blurLevel,
       toggleRunning,
+      setBlur,
+      showHelp,
       reset,
     }
   }
@@ -505,6 +527,7 @@ body {
     0 0 20px rgba(20, 184, 166, 0.3),
     0 0 30px rgba(20, 184, 166, 0.2);
 }
+
 
 .wheel[data-chosen="1"] .arc:nth-child(1),
 .wheel[data-chosen="2"] .arc:nth-child(2),
