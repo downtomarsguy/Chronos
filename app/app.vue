@@ -29,13 +29,32 @@
             <Icon :name="item.icon" class="arc-icon" />
           </div>
         </div>
+
+        <div v-show="showHelpOverlay" ref="helpOverlay" class="help-overlay z-40 fixed bottom-4 left-4 bg-zinc-900 bg-opacity-90 p-4 rounded-md border border-[#ffffff40] backdrop-blur-sm max-w-sm transition-all duration-300 ease-in-out" @click="toggleHelpOverlay">
+          <div ref="helpContent" class="help-content">
+            <h3 class="text-white font-bold text-lg mb-3 suse-mono">Keybinds & Controls</h3>
+            <ul class="text-white text-sm space-y-2 suse-mono">
+              <li><strong class="keyboard-font">Space</strong>: Play/Pause Timer</li>
+              <li><strong class="keyboard-font">R</strong>: Reset Timer</li>
+              <li><strong class="keyboard-font">F</strong>: Toggle Fullscreen</li>
+              <li><strong class="keyboard-font">B</strong>: Cycle Blur Modes (No → Half → Full)</li>
+              <li><strong class="keyboard-font">H</strong>: Toggle Help</li>
+              <li><strong class="">Right-Click / Long-Press</strong>: Open Radial Menu</li>
+              <li><strong class="">Radial Menu Options</strong>:</li>
+              <ul class="ml-4 text-xs space-y-1">
+                <li>Reset | Full Screen | Help | Full Blur | Half Blur | No Blur | Code | Play/Pause</li>
+              </ul>
+            </ul>
+            <p class="text-xs text-gray-300 mt-3">Click anywhere to close</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useHead } from '#imports'
 export default {
   name: 'RadialMenuStopwatch',
@@ -53,7 +72,7 @@ export default {
         },
         {
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=SUSE+Mono:ital,wght@0,100..800;1,100..800&display=swap'
+          href: 'https://fonts.googleapis.com/css2?family=Libertinus+Keyboard&family=SUSE+Mono:ital,wght@0,100..800;1,100..800&display=swap'
         },
       ]
     })
@@ -62,6 +81,9 @@ export default {
     const canvas = ref(null)
     const stopwatchCard = ref(null)
     const timeDisplay = ref(null)
+    const helpOverlay = ref(null)
+    const helpContent = ref(null)
+    const showHelpOverlay = ref(false)
     const showing = ref(false)
     const anchorX = ref(0)
     const anchorY = ref(0)
@@ -92,7 +114,7 @@ export default {
 
     const time = ref(0)
     const isRunning = ref(false)
-    const blurLevel = ref(0) // 0: no blur, 70: half, 90: full
+    const blurLevel = ref(0)
     const intervalId = ref(null)
 
     const formattedTime = computed(() => {
@@ -123,9 +145,47 @@ export default {
       blurLevel.value = level
     }
 
+    const cycleBlur = () => {
+      const blurModes = [0, 70, 90]
+      const currentIndex = blurModes.indexOf(blurLevel.value)
+      const nextIndex = (currentIndex + 1) % blurModes.length
+      blurLevel.value = blurModes[nextIndex]
+    }
+
+    const toggleHelpOverlay = () => {
+      if (showHelpOverlay.value) {
+        if (helpContent.value) {
+          helpContent.value.classList.remove('fade-in')
+        }
+        setTimeout(() => {
+          if (helpOverlay.value) {
+            helpOverlay.value.classList.remove('animate-expand-bottom')
+            helpOverlay.value.classList.add('animate-collapse-bottom')
+          }
+          setTimeout(() => {
+            showHelpOverlay.value = false
+            if (helpOverlay.value) {
+              helpOverlay.value.classList.remove('animate-collapse-bottom', 'animate-expand-bottom')
+            }
+          }, 800)
+        }, 300)
+      } else {
+        showHelpOverlay.value = true
+        nextTick(() => {
+          if (helpOverlay.value) {
+            helpOverlay.value.classList.add('animate-expand-bottom')
+          }
+          setTimeout(() => {
+            if (helpContent.value) {
+              helpContent.value.classList.add('fade-in')
+            }
+          }, 800)
+        })
+      }
+    }
+
     const showHelp = () => {
-      // Simple help implementation - you can expand this to a modal or more detailed info
-      alert('Help:\n- Space: Play/Pause\n- R: Reset\n- F: Fullscreen\n- Radial Menu: Right-click or long-press for options\n- Blur controls: Adjust background opacity for focus')
+      toggleHelpOverlay()
     }
 
     const reset = () => {
@@ -263,6 +323,8 @@ export default {
         reset();
       } else if (event.key === 'h' || event.key === 'H') {
         showHelp();
+      } else if (event.key === 'b' || event.key === 'B') {
+        cycleBlur();
       }
     }
 
@@ -406,6 +468,9 @@ export default {
       wheelRef,
       stopwatchCard,
       timeDisplay,
+      helpOverlay,
+      helpContent,
+      showHelpOverlay,
       showing,
       chosenIndex,
       wheelX,
@@ -422,6 +487,8 @@ export default {
       blurLevel,
       toggleRunning,
       setBlur,
+      cycleBlur,
+      toggleHelpOverlay,
       showHelp,
       reset,
     }
@@ -436,7 +503,10 @@ body {
 
 .suse-mono {
   font-family: "SUSE Mono", sans-serif;
+}
 
+.keyboard-font {
+  font-family: "Libertinus Keyboard", sans-serif;
 }
 
 @keyframes expandVertical {
@@ -448,6 +518,30 @@ body {
   to {
     transform: scaleY(1);
     opacity: 1;
+  }
+}
+
+@keyframes expandFromBottom {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes collapseToBottom {
+  from {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: scaleY(0);
+    opacity: 0;
   }
 }
 
@@ -467,6 +561,32 @@ body {
 }
 
 .time-display.fade-in {
+  opacity: 1;
+}
+
+.help-overlay {
+  transform: scaleY(0);
+  opacity: 0;
+  transform-origin: bottom center;
+  display: none;
+}
+
+.help-overlay.animate-expand-bottom {
+  display: block;
+  animation: expandFromBottom 0.8s ease-out forwards;
+}
+
+.help-overlay.animate-collapse-bottom {
+  display: block;
+  animation: collapseToBottom 0.8s ease-in forwards;
+}
+
+.help-content {
+  opacity: 0;
+  transition: opacity 0.3s ease-in;
+}
+
+.help-content.fade-in {
   opacity: 1;
 }
 
@@ -527,7 +647,6 @@ body {
     0 0 20px rgba(20, 184, 166, 0.3),
     0 0 30px rgba(20, 184, 166, 0.2);
 }
-
 
 .wheel[data-chosen="1"] .arc:nth-child(1),
 .wheel[data-chosen="2"] .arc:nth-child(2),
