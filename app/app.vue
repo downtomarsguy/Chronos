@@ -7,10 +7,12 @@
         @touchend="onTouchEnd" @mousemove="onMouseMove" @touchmove="onTouchMove">
         <canvas ref="canvas" class="absolute inset-0"></canvas>
 
-        <div ref="stopwatchCard"
-          class="stopwatch-card bg-white bg-opacity-10 p-6 w-full max-w-md border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
-          <div ref="timeDisplay" class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6">
-            {{ formattedTime }}
+        <div class="w-full h-screen bg-zinc-950 bg-opacity-80 relative overflow-hidden select-none flex items-center justify-center">
+          <div ref="stopwatchCard"
+            class="stopwatch-card bg-white bg-opacity-10 p-6 w-full max-w-md border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
+            <div ref="timeDisplay" class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6">
+              {{ formattedTime }}
+            </div>
           </div>
         </div>
 
@@ -382,25 +384,25 @@ export default {
     }
   }
 }
-</script>
 
 useHead({
-link: [
-{
-rel: 'preconnect',
-href: 'https://fonts.googleapis.com'
-},
-{
-rel: 'preconnect',
-href: 'https://fonts.gstatic.com',
-crossorigin: ''
-},
-{
-rel: 'stylesheet',
-href: 'https://fonts.googleapis.com/css2?family=SUSE+Mono:ital,wght@0,100..800;1,100..800&display=swap'
-},
-]
+  link: [
+    {
+      rel: 'preconnect',
+      href: 'https://fonts.googleapis.com'
+    },
+    {
+      rel: 'preconnect',
+      href: 'https://fonts.gstatic.com',
+      crossorigin: ''
+    },
+    {
+      rel: 'stylesheet',
+      href: 'https://fonts.googleapis.com/css2?family=SUSE+Mono:ital,wght@0,100..800;1,100..800&display=swap'
+    },
+  ]
 })
+</script>
 
 <style scoped>
 body {
