@@ -7,7 +7,8 @@
         @touchend="onTouchEnd" @mousemove="onMouseMove" @touchmove="onTouchMove">
         <canvas ref="canvas" class="absolute inset-0"></canvas>
 
-        <div class="w-full h-screen bg-zinc-950 bg-opacity-80 relative overflow-hidden select-none flex items-center justify-center">
+        <div class="w-full h-screen bg-zinc-950 relative overflow-hidden select-none flex items-center justify-center transition-colors duration-500 ease-in-out"
+             :class="{ 'bg-opacity-70': isRunning, 'bg-opacity-0': !isRunning }">
           <div ref="stopwatchCard"
             class="stopwatch-card bg-white bg-opacity-10 p-6 w-full max-w-md border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
             <div ref="timeDisplay" class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6">
@@ -34,10 +35,30 @@
 
 <script>
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { useHead } from '#imports'  // Optional: Explicit import if needed (Nuxt auto-imports it, but this makes it clear)
 
 export default {
   name: 'RadialMenuStopwatch',
   setup() {
+    // Move useHead HERE, inside setup()
+    useHead({
+      link: [
+        {
+          rel: 'preconnect',
+          href: 'https://fonts.googleapis.com'
+        },
+        {
+          rel: 'preconnect',
+          href: 'https://fonts.gstatic.com',
+          crossorigin: ''
+        },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=SUSE+Mono:ital,wght@0,100..800;1,100..800&display=swap'
+        },
+      ]
+    })
+
     const wheelRef = ref(null)
     const canvas = ref(null)
     const stopwatchCard = ref(null)
@@ -384,24 +405,6 @@ export default {
     }
   }
 }
-
-useHead({
-  link: [
-    {
-      rel: 'preconnect',
-      href: 'https://fonts.googleapis.com'
-    },
-    {
-      rel: 'preconnect',
-      href: 'https://fonts.gstatic.com',
-      crossorigin: ''
-    },
-    {
-      rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=SUSE+Mono:ital,wght@0,100..800;1,100..800&display=swap'
-    },
-  ]
-})
 </script>
 
 <style scoped>
