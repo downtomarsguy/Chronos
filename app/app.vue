@@ -13,8 +13,7 @@
           :class="{ 'bg-opacity-70': blurLevel === 70, 'bg-opacity-90': blurLevel === 90, 'bg-opacity-0': blurLevel === 0 }">
 
           <div ref="stopwatchCard"
-            class="stopwatch-card bg-white bg-opacity-10 py-4 px-6 border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
-
+            class="stopwatch-card bg-white bg-opacity-10 py-4 px-6 border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm z-20 flex flex-col items-center">
             <div class="relative">
               <canvas ref="matrixCanvas"
                 class="absolute inset-0 pointer-events-none transition-opacity duration-500 z-10"></canvas>
@@ -137,12 +136,11 @@ export default {
     const blurLevel = ref(0)
     const intervalId = ref(null)
 
-    // New refs for reset animation
     const isAnimatingReset = ref(false)
     const currentDisplay = ref([])
     const animatingDigits = ref(new Set())
-    const stepInterval = 80 // ms per shift step
-    const staggerDelay = 150 // ms between starting each digit's animation
+    const stepInterval = 80
+    const staggerDelay = 150
 
     const formattedTime = computed(() => {
       const ms = time.value % 1000
@@ -249,7 +247,7 @@ export default {
       if (currentStr === '00:00:00.0') {
         time.value = 0
         saveTimerState()
-        return // No animation needed
+        return
       }
 
       isAnimatingReset.value = true
@@ -263,12 +261,11 @@ export default {
         }
       }
 
-      // Sort for cascade effect (right-to-left, e.g., start with centiseconds)
       nonZeroPositions.sort((a, b) => b.pos - a.pos)
 
       nonZeroPositions.forEach((item, idx) => {
         setTimeout(() => {
-          let stepsLeft = item.value + 1 // +1 to include original display
+          let stepsLeft = item.value + 1
           animatingDigits.value.add(item.pos)
 
           const animateThisDigit = () => {
@@ -307,12 +304,10 @@ export default {
       menuItems.value[7].icon = newVal ? 'line-md:pause' : 'line-md:pause-to-play-filled-transition'
     })
 
-    // Persist blur level to localStorage
     watch(blurLevel, (newVal) => {
       localStorage.setItem('blurLevel', newVal.toString())
     })
 
-    // Persist timer state periodically when running
     watch(time, () => {
       if (isRunning.value) {
         saveTimerState()
@@ -547,13 +542,11 @@ export default {
     }
 
     onMounted(async () => {
-      // Load saved blur level from localStorage
       const savedBlur = localStorage.getItem('blurLevel')
       if (savedBlur !== null) {
         blurLevel.value = parseInt(savedBlur, 10)
       }
 
-      // Load saved timer state from localStorage
       const savedTime = localStorage.getItem('savedTime')
       const savedRunning = localStorage.getItem('isRunning')
       if (savedTime !== null) {
@@ -563,7 +556,6 @@ export default {
         isRunning.value = savedRunning === 'true'
       }
 
-      // If it was running, resume the timer
       if (isRunning.value) {
         const start = Date.now() - time.value
         intervalId.value = setInterval(() => {
