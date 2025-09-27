@@ -54,7 +54,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
 import { useHead } from '#imports'
 export default {
   name: 'RadialMenuStopwatch',
@@ -128,6 +128,11 @@ export default {
       return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${Math.floor(ms / 100)}`
     })
 
+    const saveTimerState = () => {
+      localStorage.setItem('savedTime', time.value.toString())
+      localStorage.setItem('isRunning', isRunning.value.toString())
+    }
+
     const toggleRunning = () => {
       if (isRunning.value) {
         clearInterval(intervalId.value)
@@ -139,6 +144,7 @@ export default {
         }, 100)
       }
       isRunning.value = !isRunning.value
+      saveTimerState()
     }
 
     const setBlur = (level) => {
@@ -193,6 +199,7 @@ export default {
       intervalId.value = null
       time.value = 0
       isRunning.value = false
+      saveTimerState()
     }
 
     const toggleFullScreen = () => {
@@ -207,6 +214,22 @@ export default {
 
     watch(isRunning, (newVal) => {
       menuItems.value[7].icon = newVal ? 'line-md:pause' : 'line-md:pause-to-play-filled-transition'
+    })
+
+    // Persist blur level to localStorage
+    watch(blurLevel, (newVal) => {
+      localStorage.setItem('blurLevel', newVal.toString())
+    })
+
+    // Persist timer state periodically when running
+    watch(time, () => {
+      if (isRunning.value) {
+        saveTimerState()
+      }
+    })
+
+    watch(isRunning, (newVal) => {
+      saveTimerState()
     })
 
     const generateNodeStaggered = (totalCount, intervalMs = 15) => {
@@ -433,6 +456,30 @@ export default {
     }
 
     onMounted(async () => {
+      // Load saved blur level from localStorage
+      const savedBlur = localStorage.getItem('blurLevel')
+      if (savedBlur !== null) {
+        blurLevel.value = parseInt(savedBlur, 10)
+      }
+
+      // Load saved timer state from localStorage
+      const savedTime = localStorage.getItem('savedTime')
+      const savedRunning = localStorage.getItem('isRunning')
+      if (savedTime !== null) {
+        time.value = parseInt(savedTime, 10)
+      }
+      if (savedRunning !== null) {
+        isRunning.value = savedRunning === 'true'
+      }
+
+      // If it was running, resume the timer
+      if (isRunning.value) {
+        const start = Date.now() - time.value
+        intervalId.value = setInterval(() => {
+          time.value = Date.now() - start
+        }, 100)
+      }
+
       ctx.value = canvas.value.getContext("2d")
       canvas.value.width = window.innerWidth
       canvas.value.height = window.innerHeight
@@ -458,6 +505,7 @@ export default {
     })
 
     onUnmounted(() => {
+      saveTimerState()
       clearInterval(intervalId.value)
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
       document.removeEventListener('keydown', handleKeyDown)
@@ -494,6 +542,7 @@ export default {
     }
   }
 }
+
 </script>
 
 <style scoped>
@@ -578,7 +627,7 @@ body {
 
 .help-overlay.animate-collapse-bottom {
   display: block;
-  animation: collapseToBottom 0.8s ease-in forwards;
+  animation: collapseToBottom 0.5s ease-in forwards;
 }
 
 .help-content {
