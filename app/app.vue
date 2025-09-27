@@ -11,8 +11,8 @@
           class="w-full h-screen bg-zinc-950 relative overflow-hidden select-none flex items-center justify-center transition-colors duration-500 ease-in-out"
           :class="{ 'bg-opacity-70': blurLevel === 70, 'bg-opacity-90': blurLevel === 90, 'bg-opacity-0': blurLevel === 0 }">
           <div ref="stopwatchCard"
-            class="stopwatch-card bg-white bg-opacity-10 py-2 px-4 border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
-            <div ref="timeDisplay" class="time-display suse-mono text-5xl font-bold text-white tracking-widest my-6">
+            class="stopwatch-card bg-white bg-opacity-10 py-4 px-6 border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
+            <div ref="timeDisplay" class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6">
               {{ formattedTime }}
             </div>
           </div>
