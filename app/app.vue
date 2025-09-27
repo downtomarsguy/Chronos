@@ -5,21 +5,36 @@
         class="app bg-zinc-950 bg-opacity-80 h-screen w-full relative overflow-hidden select-none flex items-center justify-center"
         @contextmenu.prevent @mousedown="onMouseDown" @touchstart="onTouchStart" @mouseup="onMouseUp"
         @touchend="onTouchEnd" @mousemove="onMouseMove" @touchmove="onTouchMove">
+
         <canvas ref="canvas" class="absolute inset-0"></canvas>
 
         <div
           class="w-full h-screen bg-zinc-950 relative overflow-hidden select-none flex items-center justify-center transition-colors duration-500 ease-in-out"
           :class="{ 'bg-opacity-70': blurLevel === 70, 'bg-opacity-90': blurLevel === 90, 'bg-opacity-0': blurLevel === 0 }">
+
           <div ref="stopwatchCard"
             class="stopwatch-card bg-white bg-opacity-10 py-4 px-6 border-[1px] border-[#ffffff80] rounded-md backdrop-blur-sm backdrop-opacity-30 z-20 flex flex-col items-center">
-            <div ref="timeDisplay" class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6">
-              {{ formattedTime }}
+
+            <div class="relative">
+              <canvas ref="matrixCanvas"
+                class="absolute inset-0 pointer-events-none transition-opacity duration-500 z-10"></canvas>
+
+              <div ref="timeDisplay"
+                class="time-display suse-mono text-6xl font-bold text-white tracking-widest my-6 relative z-20 transition-opacity duration-500 flex items-center justify-center leading-none">
+
+                <span v-for="(char, index) in displayChars" :key="index"
+                  :class="['digit-span', getAnimationClass(index)]" :style="getGlowStyle(index)">
+                  {{ char }}
+                </span>
+
+              </div>
             </div>
           </div>
         </div>
 
         <div ref="wheelRef" class="wheel z-30" :class="{ 'on': showing }" :data-chosen="chosenIndex"
           :style="{ '--x': `${wheelX}px`, '--y': `${wheelY}px` }">
+
           <div v-for="(item, index) in menuItems" :key="index" class="arc" :style="{
             '--rotation': `${-22.5 + index * 45}deg`,
             '--color': 'rgba(20, 184, 166, 0.4)',
@@ -30,9 +45,13 @@
           </div>
         </div>
 
-        <div v-show="showHelpOverlay" ref="helpOverlay" class="help-overlay z-40 fixed bottom-4 left-4 bg-zinc-900 bg-opacity-90 p-4 rounded-md border border-[#ffffff40] backdrop-blur-sm max-w-sm transition-all duration-300 ease-in-out" @click="toggleHelpOverlay">
+        <div v-show="showHelpOverlay" ref="helpOverlay"
+          class="help-overlay z-40 fixed bottom-4 left-4 bg-zinc-900 bg-opacity-90 p-4 rounded-md border border-[#ffffff40] backdrop-blur-sm max-w-sm transition-all duration-300 ease-in-out"
+          @click="toggleHelpOverlay">
+
           <div ref="helpContent" class="help-content">
             <h3 class="text-white font-bold text-lg mb-3 suse-mono">Keybinds & Controls</h3>
+
             <ul class="text-white text-sm space-y-2 suse-mono">
               <li><strong class="keyboard-font">Space</strong>: Play/Pause Timer</li>
               <li><strong class="keyboard-font">R</strong>: Reset Timer</li>
@@ -45,6 +64,7 @@
                 <li>Reset | Full Screen | Help | Full Blur | Half Blur | No Blur | Code | Play/Pause</li>
               </ul>
             </ul>
+
             <p class="text-xs text-gray-300 mt-3">Click anywhere to close</p>
           </div>
         </div>
@@ -117,6 +137,13 @@ export default {
     const blurLevel = ref(0)
     const intervalId = ref(null)
 
+    // New refs for reset animation
+    const isAnimatingReset = ref(false)
+    const currentDisplay = ref([])
+    const animatingDigits = ref(new Set())
+    const stepInterval = 80 // ms per shift step
+    const staggerDelay = 150 // ms between starting each digit's animation
+
     const formattedTime = computed(() => {
       const ms = time.value % 1000
       const totalSeconds = Math.floor(time.value / 1000)
@@ -127,6 +154,25 @@ export default {
       const pad = (n, z = 2) => String(n).padStart(z, '0')
       return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${Math.floor(ms / 100)}`
     })
+
+    const displayChars = computed(() => {
+      if (isAnimatingReset.value) {
+        return currentDisplay.value
+      } else {
+        return formattedTime.value.split('')
+      }
+    })
+
+    const isDigitPosition = (index) => [0, 1, 3, 4, 6, 7, 9].includes(index)
+
+    const getAnimationClass = (index) => {
+      if (!isAnimatingReset.value || !isDigitPosition(index)) return ''
+      return animatingDigits.value.has(index) ? 'matrix-anim' : ''
+    }
+
+    const getGlowStyle = (index) => {
+      return {}
+    }
 
     const saveTimerState = () => {
       localStorage.setItem('savedTime', time.value.toString())
@@ -197,9 +243,54 @@ export default {
     const reset = () => {
       clearInterval(intervalId.value)
       intervalId.value = null
-      time.value = 0
       isRunning.value = false
-      saveTimerState()
+
+      const currentStr = formattedTime.value
+      if (currentStr === '00:00:00.0') {
+        time.value = 0
+        saveTimerState()
+        return // No animation needed
+      }
+
+      isAnimatingReset.value = true
+      currentDisplay.value = currentStr.split('')
+
+      const nonZeroPositions = []
+      for (let i = 0; i < currentDisplay.value.length; i++) {
+        const char = currentDisplay.value[i]
+        if (char >= '1' && char <= '9') {
+          nonZeroPositions.push({ pos: i, value: parseInt(char) })
+        }
+      }
+
+      // Sort for cascade effect (right-to-left, e.g., start with centiseconds)
+      nonZeroPositions.sort((a, b) => b.pos - a.pos)
+
+      nonZeroPositions.forEach((item, idx) => {
+        setTimeout(() => {
+          let stepsLeft = item.value + 1 // +1 to include original display
+          animatingDigits.value.add(item.pos)
+
+          const animateThisDigit = () => {
+            stepsLeft--
+            if (stepsLeft > 0) {
+              const displayVal = stepsLeft - 1
+              currentDisplay.value[item.pos] = displayVal.toString()
+              setTimeout(animateThisDigit, stepInterval)
+            } else {
+              currentDisplay.value[item.pos] = '0'
+              animatingDigits.value.delete(item.pos)
+              if (animatingDigits.value.size === 0) {
+                isAnimatingReset.value = false
+                time.value = 0
+                saveTimerState()
+              }
+            }
+          }
+
+          animateThisDigit()
+        }, idx * staggerDelay)
+      })
     }
 
     const toggleFullScreen = () => {
@@ -530,7 +621,9 @@ export default {
       onTouchEnd,
       onMouseMove,
       onTouchMove,
-      formattedTime,
+      displayChars,
+      getAnimationClass,
+      getGlowStyle,
       isRunning,
       blurLevel,
       toggleRunning,
@@ -542,6 +635,7 @@ export default {
     }
   }
 }
+
 
 </script>
 
